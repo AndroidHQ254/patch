@@ -1,0 +1,73 @@
+From 7f3414fcd8f5f1b5e124414d78d6c49405bb83a6 Mon Sep 17 00:00:00 2001
+From: Diniboy1123 <diniboy@protonmail.com>
+Date: Sat, 4 Feb 2023 22:50:53 +0300
+Subject: [PATCH] recovery: Added F2FS compression support for wiping
+
+---
+ partition.cpp  | 9 +++++++++
+ partitions.hpp | 1 +
+ 2 files changed, 10 insertions(+)
+
+diff --git a/partition.cpp b/partition.cpp
+index 3bb1bd1..6dfe7fe 100755
+--- a/partition.cpp
++++ b/partition.cpp
+@@ -138,6 +138,7 @@ enum TW_FSTAB_FLAGS {
+ 	TWFLAG_METADATA_ENCRYPTION,
+ 	TWFLAG_FLASHIMG,
+ 	TWFLAG_FORCEENCRYPT,
++	TWFLAG_FSCOMPRESS,
+ 	TWFLAG_FSFLAGS,
+ 	TWFLAG_IGNOREBLKID,
+ 	TWFLAG_LENGTH,
+@@ -187,6 +188,7 @@ const struct flag_list tw_flags[] = {
+ 	{ "metadata_encryption=",   TWFLAG_METADATA_ENCRYPTION },
+ 	{ "flashimg",               TWFLAG_FLASHIMG },
+ 	{ "forceencrypt=",          TWFLAG_FORCEENCRYPT },
++	{ "fscompress",             TWFLAG_FSCOMPRESS },
+ 	{ "fsflags=",               TWFLAG_FSFLAGS },
+ 	{ "ignoreblkid",            TWFLAG_IGNOREBLKID },
+ 	{ "length=",                TWFLAG_LENGTH },
+@@ -247,6 +249,7 @@ TWPartition::TWPartition() {
+ 	Backup_Size = 0;
+ 	Can_Be_Encrypted = false;
+ 	Is_Encrypted = false;
++	Is_Compressed = false;
+ 	Is_Decrypted = false;
+ 	Is_FBE = false;
+ 	Mount_To_Decrypt = false;
+@@ -969,6 +972,9 @@ void TWPartition::Apply_TW_Flag(const unsigned flag, const char* str, const bool
+ 		case TWFLAG_FLASHIMG:
+ 			Can_Flash_Img = val;
+ 			break;
++		case TWFLAG_FSCOMPRESS:
++			Is_Compressed = val;
++			break;
+ 		case TWFLAG_FSFLAGS:
+ 			Process_FS_Flags(str);
+ 			break;
+@@ -2474,6 +2480,9 @@ bool TWPartition::Wipe_F2FS() {
+ 
+ 	if(needs_casefold)
+ 		f2fs_command += " -O casefold -C utf8";
++	
++	if(Is_Compressed)
++		f2fs_command += " -O compression,extra_attr";
+ 
+ 	f2fs_command += " " + Actual_Block_Device + " " + dev_sz_str;
+ 
+diff --git a/partitions.hpp b/partitions.hpp
+index 1b2f3cb..8a04af9 100755
+--- a/partitions.hpp
++++ b/partitions.hpp
+@@ -257,6 +257,7 @@ private:
+ 	unsigned long long Restore_Size;                                          // Restore size of the current restore operation
+ 	bool Can_Be_Encrypted;                                                    // This partition might be encrypted, affects error handling, can only be true if crypto support is compiled in
+ 	bool Is_Encrypted;                                                        // This partition is thought to be encrypted -- it wouldn't mount for some reason, only avialble with crypto support
++	bool Is_Compressed;                                                       // This partition should be compressed
+ 	bool Is_Decrypted;                                                        // This partition has successfully been decrypted
+ 	bool Is_FBE;                                                              // File Based Encryption is present
+ 	bool Mount_To_Decrypt;                                                    // Mount this partition during decrypt (/vendor, /firmware, etc in case we need proprietary libs or firmware files)
+-- 
+2.36.0.windows.1
+
